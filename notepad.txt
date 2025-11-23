@@ -24,5 +24,5 @@ orders: dùng image build -> lỗi nhưng chạy được 1 phần (chạy với
 payments: dùng image build -> lỗi!!! (503)
 tickets: dùng image build -> lỗi!!! (502)
 
-các microservices build ra có thể chạy: client + expiration (+ orders)
+các microservices build ra có thể chạy: client + expiration (có thể 1 phần với orders)
 

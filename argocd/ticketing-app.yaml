@@ -4,8 +4,9 @@ metadata:
   name: ticketing-app
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: client=daihuu/client
-    argocd-image-updater.argoproj.io/client.update-strategy: latest
+    argocd-image-updater.argoproj.io/image-list: client=daihuu/client,expiration=daihuu/expiration
+    argocd-image-updater.argoproj.io/client.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/expiration.update-strategy: newest-build
 
 spec:
   project: default
