@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: tickets
-          image: stephengrider/tickets
+          #image: stephengrider/tickets
+          image: daihuu/tickets
           env:
             - name: NATS_CLIENT_ID
               valueFrom:
