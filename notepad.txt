@@ -9,3 +9,13 @@ kubectl apply -f infra/k8s/ -n ticketing-dev
 kubectl apply -f infra/k8s-dev/ingress-srv.yaml -n ticketing-dev
 
 
+kubectl delete -f infra/k8s-dev/ingress-srv.yaml -n ticketing-dev
+kubectl delete -f infra/k8s/ -n ticketing-dev
+
+kubectl delete secret jwt-secret -n ticketing-dev
+kubectl delete secret stripe-secret -n ticketing-dev
+
+kubectl delete namespace ticketing-dev
+
+auth: build ra image bị lỗi
+expiration: ok
