@@ -48,4 +48,5 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  # storageClassName: gp2
+  # using gp3 for AWS EBS dynamic provisioning
+  storageClassName: gp3

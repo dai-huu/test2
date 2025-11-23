@@ -48,5 +48,5 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  # adjust storageClassName if your cluster uses a specific StorageClass (e.g. gp2 or gp3)
-  # storageClassName: gp2
+  # using gp3 for AWS EBS dynamic provisioning
+  storageClassName: gp3
