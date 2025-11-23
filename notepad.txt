@@ -1,0 +1,11 @@
+kubectl create namespace ticketing-dev
+kubectl create secret generic jwt-secret --from-literal=JWT_KEY='your_jwt_key' -n ticketing-dev
+kubectl create secret generic stripe-secret --from-literal=STRIPE_KEY='sk_test_xxx' -n ticketing-dev
+
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace
+
+kubectl apply -f infra/k8s/ -n ticketing-dev
+
+kubectl apply -f infra/k8s-dev/ingress-srv.yaml -n ticketing-dev
+
+
