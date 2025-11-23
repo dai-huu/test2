@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@sgtickets/common": "^1.0.24",
+    "body-parser": "^2.2.0",
+    "cookie-session": "^2.1.1",
+    "express": "^5.1.0"
+  }
+}
