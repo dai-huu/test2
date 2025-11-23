@@ -14,7 +14,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/dai-huu/test2.git # Replace with your Git repository URL
+    repoURL: 'https://github.com/dai-huu/test2.git'
     targetRevision: main
     path: infra/k8s
   destination:
