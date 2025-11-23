@@ -4,13 +4,9 @@ metadata:
   name: ticketing-app
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: auth=daihuu/auth,client=daihuu/client,orders=daihuu/orders,payments=daihuu/payments,tickets=daihuu/tickets,expiration=daihuu/expiration
-    argocd-image-updater.argoproj.io/auth.update-strategy: latest
+    argocd-image-updater.argoproj.io/image-list: client=daihuu/client
     argocd-image-updater.argoproj.io/client.update-strategy: latest
-    argocd-image-updater.argoproj.io/orders.update-strategy: latest
-    argocd-image-updater.argoproj.io/payments.update-strategy: latest
-    argocd-image-updater.argoproj.io/tickets.update-strategy: latest
-    argocd-image-updater.argoproj.io/expiration.update-strategy: latest
+
 spec:
   project: default
   source:
