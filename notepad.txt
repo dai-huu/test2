@@ -17,5 +17,8 @@ kubectl delete secret stripe-secret -n ticketing-dev
 
 kubectl delete namespace ticketing-dev
 
+client: ok
 auth: build ra image bị lỗi
 expiration: ok
+orders: lỗi nhưng chạy được 1 phần (chạy với client + expiration mà đã build ra)
+
