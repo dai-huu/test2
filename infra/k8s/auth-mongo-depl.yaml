@@ -15,6 +15,13 @@ spec:
       containers:
         - name: auth-mongo
           image: mongo
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+      volumes:
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: auth-mongo-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -28,3 +35,18 @@ spec:
       protocol: TCP
       port: 27017
       targetPort: 27017
+
+---
+# PVC for auth mongo
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: auth-mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # adjust storageClassName if your cluster uses a specific StorageClass (e.g. gp2 or gp3)
+  # storageClassName: gp2

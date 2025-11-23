@@ -15,6 +15,13 @@ spec:
       containers:
         - name: tickets-mongo
           image: mongo
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+      volumes:
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: tickets-mongo-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -28,3 +35,17 @@ spec:
       protocol: TCP
       port: 27017
       targetPort: 27017
+
+---
+# PVC for tickets mongo
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tickets-mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName: gp2

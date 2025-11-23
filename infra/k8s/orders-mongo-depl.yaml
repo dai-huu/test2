@@ -15,6 +15,13 @@ spec:
       containers:
         - name: orders-mongo
           image: mongo
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+      volumes:
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: orders-mongo-pvc
 ---
 apiVersion: v1
 kind: Service
@@ -28,3 +35,17 @@ spec:
       protocol: TCP
       port: 27017
       targetPort: 27017
+
+---
+# PVC for orders mongo
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: orders-mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName: gp2
