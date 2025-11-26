@@ -1,0 +1,93 @@
+stages:
+  - build
+  - update-manifest
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  SHORT_TAG: "${CI_COMMIT_SHORT_SHA}"
+
+.default:
+  image: docker:24
+  services:
+    - docker:dind
+  before_script:
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  
+###########################################
+# Build tất cả microservices
+###########################################
+
+
+
+build_client:
+  extends: .default
+  stage: build
+  script:
+    - docker build -f client/Dockerfile -t $DOCKERHUB_USERNAME/client:latest client/
+    - docker tag $DOCKERHUB_USERNAME/client:latest $DOCKERHUB_USERNAME/client:$SHORT_TAG
+    - docker push $DOCKERHUB_USERNAME/client:latest
+    - docker push $DOCKERHUB_USERNAME/client:$SHORT_TAG
+
+
+###########################################
+# Update Kubernetes Manifests with changes
+###########################################
+
+update_manifest:
+  stage: update-manifest
+  image: alpine:3.18
+  before_script:
+    - apk add --no-cache git bash sed
+    - git config --global user.email "ci@gitlab.local"
+    - git config --global user.name "GitLab CI"
+    - git config --global http.sslVerify false
+  script:
+    - git remote set-url origin "http://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git fetch origin
+    - git checkout "$CI_COMMIT_REF_NAME" || git checkout -b "$CI_COMMIT_REF_NAME"
+    - git pull origin "$CI_COMMIT_REF_NAME"
+
+    - SHORT_TAG="$CI_COMMIT_SHORT_SHA"
+    - echo "Updating manifests with tag $SHORT_TAG..."
+
+    - |
+      SERVICES="tickets orders payments auth client expiration"
+      
+      for service in $SERVICES; do
+        FILE="infra/k8s/${service}-depl.yaml"
+
+        if [ -f "$FILE" ]; then
+          echo "------------------------------------------------"
+          echo "Processing $service -> $FILE"
+          
+          # [DEBUG] In ra dòng image hiện tại để xem nó là gì
+          echo "Current content:"
+          grep "image:" "$FILE" || echo "NOT FOUND IMAGE KEY!"
+
+          # [FIX REGEX]
+          # s|image:.*... : Bắt đầu bằng chữ image: và bất kỳ ký tự nào sau đó (xử lý khoảng trắng thừa)
+          # ${service} : Tìm tên service
+          # .* : Bắt nốt phần đuôi (ví dụ :tag cũ)
+          sed -i "s|image:.*${service}.*|image: ${DOCKERHUB_USERNAME}/${service}:${SHORT_TAG}|g" "$FILE"
+          
+          # [DEBUG] In ra kết quả sau khi sed để kiểm tra
+          echo "New content:"
+          grep "image:" "$FILE"
+        else
+          echo "Warning: File $FILE not found."
+        fi
+      done
+      echo "------------------------------------------------"
+
+    # Commit
+    - git add infra/k8s || true
+    - |
+      if ! git diff --cached --quiet; then
+        echo "Changes detected. Committing..."
+        git commit -m "Update image tags to $SHORT_TAG [skip ci]"
+        git push origin "$CI_COMMIT_REF_NAME"
+      else
+        echo "!!! ERROR: No changes detected after sed commands !!!"
+        echo "Please check the Logs above to see 'Current content' vs 'New content'"
+        # Không exit 1 để pipeline không đỏ lòm, nhưng bạn cần đọc log
+        exit 1 
+      fi
