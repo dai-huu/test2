@@ -28,6 +28,56 @@ build_client:
     - docker push $DOCKERHUB_USERNAME/client:$SHORT_TAG
 
 
+build_tickets:
+  extends: .default
+  stage: build
+  script:
+    - docker build -f tickets/Dockerfile -t $DOCKERHUB_USERNAME/tickets:latest tickets/
+    - docker tag $DOCKERHUB_USERNAME/tickets:latest $DOCKERHUB_USERNAME/tickets:$SHORT_TAG
+    - docker push $DOCKERHUB_USERNAME/tickets:latest
+    - docker push $DOCKERHUB_USERNAME/tickets:$SHORT_TAG
+
+
+build_orders:
+  extends: .default
+  stage: build
+  script:
+    - docker build -f orders/Dockerfile -t $DOCKERHUB_USERNAME/orders:latest orders/
+    - docker tag $DOCKERHUB_USERNAME/orders:latest $DOCKERHUB_USERNAME/orders:$SHORT_TAG
+    - docker push $DOCKERHUB_USERNAME/orders:latest
+    - docker push $DOCKERHUB_USERNAME/orders:$SHORT_TAG
+
+
+build_payments:
+  extends: .default
+  stage: build
+  script:
+    - docker build -f payments/Dockerfile -t $DOCKERHUB_USERNAME/payments:latest payments/
+    - docker tag $DOCKERHUB_USERNAME/payments:latest $DOCKERHUB_USERNAME/payments:$SHORT_TAG
+    - docker push $DOCKERHUB_USERNAME/payments:latest
+    - docker push $DOCKERHUB_USERNAME/payments:$SHORT_TAG
+
+
+build_auth:
+  extends: .default
+  stage: build
+  script:
+    - docker build -f auth/Dockerfile -t $DOCKERHUB_USERNAME/auth:latest auth/
+    - docker tag $DOCKERHUB_USERNAME/auth:latest $DOCKERHUB_USERNAME/auth:$SHORT_TAG
+    - docker push $DOCKERHUB_USERNAME/auth:latest
+    - docker push $DOCKERHUB_USERNAME/auth:$SHORT_TAG
+
+
+build_expiration:
+  extends: .default
+  stage: build
+  script:
+    - docker build -f expiration/Dockerfile -t $DOCKERHUB_USERNAME/expiration:latest expiration/
+    - docker tag $DOCKERHUB_USERNAME/expiration:latest $DOCKERHUB_USERNAME/expiration:$SHORT_TAG
+    - docker push $DOCKERHUB_USERNAME/expiration:latest
+    - docker push $DOCKERHUB_USERNAME/expiration:$SHORT_TAG
+
+
 ###########################################
 # Update Kubernetes Manifests with changes
 ###########################################
