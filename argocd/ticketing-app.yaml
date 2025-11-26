@@ -3,20 +3,20 @@ kind: Application
 metadata:
   name: ticketing-app
   namespace: argocd
-  annotations:
-    argocd-image-updater.argoproj.io/image-list: client=daihuu/client #,expiration=daihuu/expiration
-    argocd-image-updater.argoproj.io/client.update-strategy: newest-build
+  #annotations:
+    #argocd-image-updater.argoproj.io/image-list: client=daihuu/client #,expiration=daihuu/expiration
+    #argocd-image-updater.argoproj.io/client.update-strategy: newest-build
     #argocd-image-updater.argoproj.io/expiration.update-strategy: newest-build
 
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/dai-huu/test2.git'
+    repoURL: 'http://47.130.2.123/root/Ticketing-app-microservices-node-js-react.git'
     targetRevision: main
     path: infra/k8s
   destination:
     #server: 'https://D9BA1369763C234F74DA3968D99911E1.gr7.ap-northeast-1.eks.amazonaws.com'
-    server: https://C086B95021ABBE9CA81B99946D843849.yl4.ap-northeast-1.eks.amazonaws.com
+    server: https://017737841D5DDDA6EF06C1E209CE97BE.gr7.ap-northeast-1.eks.amazonaws.com
     namespace: ticketing-dev
   syncPolicy:
     automated:

@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: expiration
-          #image: stephengrider/expiration
-          image: daihuu/expiration
+          image: stephengrider/expiration
+          #image: daihuu/expiration          
           env:
             - name: NATS_CLIENT_ID
               valueFrom:
