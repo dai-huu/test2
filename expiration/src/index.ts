@@ -1,3 +1,5 @@
+// initialize tracer
+import './tracer';
 import { natsWrapper } from './nats-wrapper';
 import { OrderCreatedListener } from './events/listeners/order-created-listener';
 

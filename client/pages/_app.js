@@ -1,3 +1,15 @@
+// Initialize server-side tracer only (avoid running in browser)
+if (typeof window === 'undefined') {
+  try {
+    require('../src/tracer');
+  } catch (err) {
+    // don't crash the app if tracer init fails
+    // it may not be installed in some environments
+    // eslint-disable-next-line no-console
+    console.error('Failed to init tracer (server-side):', err);
+  }
+}
+
 import 'bootstrap/dist/css/bootstrap.css';
 import buildClient from '../api/build-client';
 import Header from '../components/header';

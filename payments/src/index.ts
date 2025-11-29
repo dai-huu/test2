@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+// initialize tracer
+import './tracer';
 import { app } from './app';
 import { natsWrapper } from './nats-wrapper';
 import { OrderCancelledListener } from './events/listeners/order-cancelled-listener';

@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+// initialize tracer as early as possible
+import './tracer';
 
 import { app } from './app';
 

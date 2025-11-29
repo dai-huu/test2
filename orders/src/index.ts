@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+// initialize tracer early
+import './tracer';
 import { app } from './app';
 import { natsWrapper } from './nats-wrapper';
 import { TicketCreatedListener } from './events/listeners/ticket-created-listener';
