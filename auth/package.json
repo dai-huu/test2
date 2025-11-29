@@ -31,7 +31,8 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.9.7",
     "ts-node-dev": "^1.0.0-pre.44",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "jaeger-client": "3.19.0"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",

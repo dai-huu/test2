@@ -23,7 +23,8 @@
     "bull": "^3.13.0",
     "node-nats-streaming": "^0.2.6",
     "ts-node-dev": "^1.0.0-pre.44",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "jaeger-client": "3.19.0"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",
