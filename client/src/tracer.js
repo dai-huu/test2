@@ -23,11 +23,14 @@ const options = {
   },
 };
 
+let tracer;
 try {
-  initTracer(config, options);
+  tracer = initTracer(config, options);
   // eslint-disable-next-line no-console
   console.log('Jaeger tracer initialized for client (server-side)');
 } catch (err) {
   // eslint-disable-next-line no-console
   console.error('Failed to initialize Jaeger tracer (client):', err);
 }
+
+module.exports = tracer;
