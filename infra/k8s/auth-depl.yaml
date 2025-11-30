@@ -27,13 +27,13 @@ spec:
 
             - name: OTEL_SERVICE_NAME
               value: 'auth'
-              
+
             # --- CẤU HÌNH OTLP/HTTP (CHẮC CHẮN HOẠT ĐỘNG) ---
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: 'http/protobuf'  # OTLP qua HTTP (tốt cho Node.js)
             - name: OTEL_EXPORTER_OTLP_ENDPOINT # <-- Trỏ đến cổng 4318 NodePort
               #value: 'http://10.0.142.13:<OTLP_HTTP_NODEPORT>' 
-              value: 'http://10.0.142.13:32225'
+              value: 'http://10.0.142.13:32225/v1/traces' 
             # Bỏ qua OTEL_TRACES_EXPORTER vì nó được suy ra từ OTLP_ENDPOINT
             - name: OTEL_LOG_LEVEL
               value: 'debug'
