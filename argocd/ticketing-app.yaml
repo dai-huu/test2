@@ -13,11 +13,11 @@ spec:
   source:
     #repoURL: 'http://47.130.2.123/root/Ticketing-app-microservices-node-js-react.git'
     repoURL: https://github.com/dai-huu/test2.git
-    targetRevision: main
+    targetRevision: test-auto-instrumentation
     path: infra/k8s
   destination:
     #server: 'https://D9BA1369763C234F74DA3968D99911E1.gr7.ap-northeast-1.eks.amazonaws.com'
-    server: https://872B4A38994DDAE166B490F6732A0F19.gr7.ap-northeast-1.eks.amazonaws.com
+    server: https://E40B98A2F73C3C2A0103484487F67163.sk1.ap-northeast-1.eks.amazonaws.com
     namespace: ticketing-dev
   syncPolicy:
     automated:
