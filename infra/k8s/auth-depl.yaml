@@ -31,6 +31,10 @@ spec:
               # Dùng Node IP và NodePort của Cluster A
               #value: 'http://<JAEGER_NODE_IP>:<JAEGER_COLLECTOR_PORT>/api/traces'
               value: 'http://10.0.142.13:30837/api/traces'
+            - name: OTEL_LOG_LEVEL # <-- BIẾN MỚI
+              value: 'debug'
+            - name: OTEL_TRACES_EXPORTER # <-- BIẾN MỚI
+              value: 'jaeger'
 ---
 apiVersion: v1
 kind: Service

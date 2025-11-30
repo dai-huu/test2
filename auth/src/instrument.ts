@@ -8,12 +8,12 @@ import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 // để trỏ đến Jaeger Collector (NodeIP:NodePort/api/traces)
 const jaegerExporter = new JaegerExporter({}); 
 
+// Ensure service name is set via env (NodeSDK will pick this up)
+process.env.OTEL_SERVICE_NAME = process.env.OTEL_SERVICE_NAME || 'auth-service';
+
 // Khởi tạo Node SDK
 const sdk = new NodeSDK({
-  // Đặt tên service, lấy từ biến môi trường OTEL_SERVICE_NAME
-  resource: new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: process.env.OTEL_SERVICE_NAME || 'auth-service',
-  }),
+  // NodeSDK will derive the resource from environment variables; no explicit Resource instance here
   // Thiết lập Exporter để gửi trace
   traceExporter: jaegerExporter,
   // Tự động theo dõi các thư viện Express, HTTP, Mongoose/MongoDB
