@@ -24,6 +24,13 @@ spec:
                 secretKeyRef:
                   name: jwt-secret
                   key: JWT_KEY
+            # --- CẤU HÌNH OPENTELEMETRY ---
+            - name: OTEL_SERVICE_NAME
+              value: 'auth' 
+            - name: OTEL_EXPORTER_JAEGER_ENDPOINT
+              # Dùng Node IP và NodePort của Cluster A
+              #value: 'http://<JAEGER_NODE_IP>:<JAEGER_COLLECTOR_PORT>/api/traces'
+              value: 'http://10.0.142.13:30837/api/traces'
 ---
 apiVersion: v1
 kind: Service
