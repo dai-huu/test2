@@ -1,6 +1,7 @@
 stages:
   - build
   - update-manifest
+
 variables:
   DOCKER_TLS_CERTDIR: ""
   SHORT_TAG: "${CI_COMMIT_SHORT_SHA}"
@@ -11,102 +12,130 @@ variables:
     - docker:dind
   before_script:
     - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-  
+
 ###########################################
 # Build tất cả microservices
 ###########################################
 
-
+# Template chung cho các job build để tránh lặp code
+.build_template:
+  extends: .default
+  stage: build
+  script:
+    # Biến SERVICE_NAME phải được định nghĩa trong từng job cụ thể
+    - docker build -f ${SERVICE_NAME}/Dockerfile -t ${DOCKERHUB_USERNAME}/${SERVICE_NAME}:latest ${SERVICE_NAME}/
+    - docker tag ${DOCKERHUB_USERNAME}/${SERVICE_NAME}:latest ${DOCKERHUB_USERNAME}/${SERVICE_NAME}:${SHORT_TAG}
+    - docker push ${DOCKERHUB_USERNAME}/${SERVICE_NAME}:latest
+    - docker push ${DOCKERHUB_USERNAME}/${SERVICE_NAME}:${SHORT_TAG}
+    # Tạo marker file để job sau biết service này đã được build
+    - mkdir -p built_services
+    - touch built_services/${SERVICE_NAME}
+  artifacts:
+    paths:
+      - built_services/
+    expire_in: 1 hour
 
 build_client:
-  extends: .default
-  stage: build
+  extends: .build_template
+  variables:
+    SERVICE_NAME: client
   rules:
-    - changes:
-      - client/**
-      - common/**
-    - when: never
-  script:
-    - docker build -f client/Dockerfile -t $DOCKERHUB_USERNAME/client:latest client/
-    - docker tag $DOCKERHUB_USERNAME/client:latest $DOCKERHUB_USERNAME/client:$SHORT_TAG
-    - docker push $DOCKERHUB_USERNAME/client:latest
-    - docker push $DOCKERHUB_USERNAME/client:$SHORT_TAG
-
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - client/**
+        - common/**
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - client/**
+        - common/**
+      when: on_success
+    - when: never # Ngăn không cho chạy trong các trường hợp khác
 
 build_tickets:
-  extends: .default
-  stage: build
+  extends: .build_template
+  variables:
+    SERVICE_NAME: tickets
   rules:
-    - changes:
-      - tickets/**
-      - common/**
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - tickets/**
+        - common/**
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - tickets/**
+        - common/**
+      when: on_success
     - when: never
-  script:
-    - docker build -f tickets/Dockerfile -t $DOCKERHUB_USERNAME/tickets:latest tickets/
-    - docker tag $DOCKERHUB_USERNAME/tickets:latest $DOCKERHUB_USERNAME/tickets:$SHORT_TAG
-    - docker push $DOCKERHUB_USERNAME/tickets:latest
-    - docker push $DOCKERHUB_USERNAME/tickets:$SHORT_TAG
-
 
 build_orders:
-  extends: .default
-  stage: build
+  extends: .build_template
+  variables:
+    SERVICE_NAME: orders
   rules:
-    - changes:
-      - orders/**
-      - common/**
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - orders/**
+        - common/**
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - orders/**
+        - common/**
+      when: on_success
     - when: never
-  script:
-    - docker build -f orders/Dockerfile -t $DOCKERHUB_USERNAME/orders:latest orders/
-    - docker tag $DOCKERHUB_USERNAME/orders:latest $DOCKERHUB_USERNAME/orders:$SHORT_TAG
-    - docker push $DOCKERHUB_USERNAME/orders:latest
-    - docker push $DOCKERHUB_USERNAME/orders:$SHORT_TAG
-
 
 build_payments:
-  extends: .default
-  stage: build
+  extends: .build_template
+  variables:
+    SERVICE_NAME: payments
   rules:
-    - changes:
-      - payments/**
-      - common/**
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - payments/**
+        - common/**
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - payments/**
+        - common/**
+      when: on_success
     - when: never
-  script:
-    - docker build -f payments/Dockerfile -t $DOCKERHUB_USERNAME/payments:latest payments/
-    - docker tag $DOCKERHUB_USERNAME/payments:latest $DOCKERHUB_USERNAME/payments:$SHORT_TAG
-    - docker push $DOCKERHUB_USERNAME/payments:latest
-    - docker push $DOCKERHUB_USERNAME/payments:$SHORT_TAG
-
 
 build_auth:
-  extends: .default
-  stage: build
+  extends: .build_template
+  variables:
+    SERVICE_NAME: auth
   rules:
-    - changes:
-      - auth/**
-      - common/**
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - auth/**
+        - common/**
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - auth/**
+        - common/**
+      when: on_success
     - when: never
-  script:
-    - docker build -f auth/Dockerfile -t $DOCKERHUB_USERNAME/auth:latest auth/
-    - docker tag $DOCKERHUB_USERNAME/auth:latest $DOCKERHUB_USERNAME/auth:$SHORT_TAG
-    - docker push $DOCKERHUB_USERNAME/auth:latest
-    - docker push $DOCKERHUB_USERNAME/auth:$SHORT_TAG
-
 
 build_expiration:
-  extends: .default
-  stage: build
+  extends: .build_template
+  variables:
+    SERVICE_NAME: expiration
   rules:
-    - changes:
-      - expiration/**
-      - common/**
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - expiration/**
+        - common/**
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - expiration/**
+        - common/**
+      when: on_success
     - when: never
-  script:
-    - docker build -f expiration/Dockerfile -t $DOCKERHUB_USERNAME/expiration:latest expiration/
-    - docker tag $DOCKERHUB_USERNAME/expiration:latest $DOCKERHUB_USERNAME/expiration:$SHORT_TAG
-    - docker push $DOCKERHUB_USERNAME/expiration:latest
-    - docker push $DOCKERHUB_USERNAME/expiration:$SHORT_TAG
-
 
 ###########################################
 # Update Kubernetes Manifests with changes
@@ -115,12 +144,38 @@ build_expiration:
 update_manifest:
   stage: update-manifest
   image: alpine:3.18
+  # Sử dụng needs để lấy artifacts từ tất cả các job build
+  needs:
+    - job: build_client
+      optional: true # Job là tùy chọn, pipeline không fail nếu job này không chạy
+    - job: build_tickets
+      optional: true
+    - job: build_orders
+      optional: true
+    - job: build_payments
+      optional: true
+    - job: build_auth
+      optional: true
+    - job: build_expiration
+      optional: true
+  rules:
+    # Job này chỉ chạy trên nhánh chính (main/master) và khi có thay đổi trong các thư mục liên quan
+    - if: '$CI_COMMIT_BRANCH == "main" && (CI_PIPELINE_SOURCE != "schedule")'
+      when: on_success
+    - when: never
   before_script:
-    - apk add --no-cache git bash sed
+    - apk add --no-cache git bash yq
     - git config --global user.email "ci@gitlab.local"
     - git config --global user.name "GitLab CI"
     - git config --global http.sslVerify false
   script:
+    - |
+      # Kiểm tra xem có service nào được build không
+      if [ ! -d "built_services" ] || [ -z "$(ls -A built_services)" ]; then
+        echo "No services were built in the previous stage. Nothing to update."
+        exit 0
+      fi
+
     - git remote set-url origin "http://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
     - git fetch origin
     - git checkout "$CI_COMMIT_REF_NAME" || git checkout -b "$CI_COMMIT_REF_NAME"
@@ -128,46 +183,43 @@ update_manifest:
 
     - SHORT_TAG="$CI_COMMIT_SHORT_SHA"
     - echo "Updating manifests with tag $SHORT_TAG..."
+    - echo "Services to be updated:"
+    - ls built_services
 
     - |
-      SERVICES="tickets orders payments auth client expiration"
-      
-      for service in $SERVICES; do
+      # Vòng lặp chỉ duyệt qua các service đã được build (dựa trên artifact files)
+      for service in $(ls built_services); do
         FILE="infra/k8s/${service}-depl.yaml"
 
         if [ -f "$FILE" ]; then
           echo "------------------------------------------------"
           echo "Processing $service -> $FILE"
           
-          # [DEBUG] In ra dòng image hiện tại để xem nó là gì
+          # [DEBUG] In ra dòng image hiện tại
           echo "Current content:"
-          grep "image:" "$FILE" || echo "NOT FOUND IMAGE KEY!"
+          grep "image:" "$FILE"
 
-          # [FIX REGEX]
-          # s|image:.*... : Bắt đầu bằng chữ image: và bất kỳ ký tự nào sau đó (xử lý khoảng trắng thừa)
-          # ${service} : Tìm tên service
-          # .* : Bắt nốt phần đuôi (ví dụ :tag cũ)
-          sed -i "s|image:.*${service}.*|image: ${DOCKERHUB_USERNAME}/${service}:${SHORT_TAG}|g" "$FILE"
+          # Update image bằng yq
+          NEW_IMAGE="${DOCKERHUB_USERNAME}/${service}:${SHORT_TAG}"
+          yq eval -i "(.spec.template.spec.containers[] | select(.name == \"${service}\")).image = \"${NEW_IMAGE}\"" "$FILE"
           
-          # [DEBUG] In ra kết quả sau khi sed để kiểm tra
+          # [DEBUG] In ra kết quả sau khi update
           echo "New content:"
           grep "image:" "$FILE"
         else
-          echo "Warning: File $FILE not found."
+          echo "Warning: File $FILE not found for built service '$service'."
         fi
       done
       echo "------------------------------------------------"
 
     # Commit
-    - git add infra/k8s || true
+    - git add infra/k8s
     - |
       if ! git diff --cached --quiet; then
         echo "Changes detected. Committing..."
-        git commit -m "Update image tags to $SHORT_TAG [skip ci]"
+        git commit -m "Update image tags to $SHORT_TAG for built services [skip ci]"
         git push origin "$CI_COMMIT_REF_NAME"
       else
-        echo "!!! ERROR: No changes detected after sed commands !!!"
-        echo "Please check the Logs above to see 'Current content' vs 'New content'"
-        # Không exit 1 để pipeline không đỏ lòm, nhưng bạn cần đọc log
-        exit 1 
+        echo "No changes were made to the manifest files. Nothing to commit."
+        exit 0
       fi
