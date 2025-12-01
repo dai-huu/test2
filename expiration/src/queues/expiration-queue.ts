@@ -2,7 +2,8 @@ import Queue from 'bull';
 import { ExpirationCompletePublisher } from '../events/publishers/expiration-complete-publisher';
 import { natsWrapper } from '../nats-wrapper';
 import { tracer } from '../tracer';
-import { extractTraceFrom, injectTraceTo, startJobSpan } from '../tracing-utils';
+import { extractTraceFrom, injectTraceTo, startJobSpan, getTraceIds } from '../tracing-utils';
+import logger from '../logger';
 
 interface Payload {
   orderId: string;
@@ -23,6 +24,8 @@ expirationQueue.process(async (job) => {
     'order.id': job.data.orderId,
     'span.kind': 'worker',
   }, 'expiration');
+  const ids = getTraceIds(tracer, span);
+  const log = logger.child ? logger.child({ trace_id: ids.traceId }) : logger;
   try {
     // publish expiration complete and inject trace context so downstream services can continue the trace
     const payload: any = { orderId: job.data.orderId };

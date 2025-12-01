@@ -5,6 +5,8 @@ import { Ticket } from '../../models/ticket';
 import { TicketUpdatedPublisher } from '../publishers/ticket-updated-publisher';
 import { tracer } from '../../tracer';
 import { extractTraceFrom, injectTraceTo } from '../../tracing-utils';
+import { getTraceIds } from '../../tracing-utils';
+import logger from '../../logger';
 
 export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
   subject: Subjects.OrderCancelled = Subjects.OrderCancelled;
@@ -25,6 +27,8 @@ export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
         'service.name': 'tickets',
       },
     });
+    const ids = getTraceIds(tracer, span);
+    const log = logger.child ? logger.child({ trace_id: ids.traceId }) : logger;
 
     const ticket = await Ticket.findById(data.ticket.id);
 

@@ -3,7 +3,8 @@ import { Message } from 'node-nats-streaming';
 import { queueGroupName } from './queue-group-name';
 import { expirationQueue } from '../../queues/expiration-queue';
 import { tracer } from '../../tracer';
-import { extractTraceFrom, injectTraceTo, startEventSpan } from '../../tracing-utils';
+import { extractTraceFrom, injectTraceTo, startEventSpan, getTraceIds } from '../../tracing-utils';
+import logger from '../../logger';
 
 export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   subject: Subjects.OrderCreated = Subjects.OrderCreated;
@@ -20,6 +21,8 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
       'queue.name': queueGroupName,
       'span.kind': 'consumer',
     }, 'expiration');
+    const ids = getTraceIds(tracer, span);
+    const log = logger.child ? logger.child({ trace_id: ids.traceId }) : logger;
 
     try {
       const delay = new Date(data.expiresAt).getTime() - new Date().getTime();

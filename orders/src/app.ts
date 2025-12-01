@@ -5,7 +5,8 @@ import { json } from 'body-parser';
 import cookieSession from 'cookie-session';
 import { errorHandler, NotFoundError, currentUser } from '@sgtickets/common';
 import { tracer } from './tracer';
-import { startHttpSpan } from './tracing-utils';
+import { startHttpSpan, getTraceIds } from './tracing-utils';
+import logger from './logger';
 
 import { deleteOrderRouter } from './routes/delete';
 import { indexOrderRouter } from './routes/index';
@@ -19,11 +20,16 @@ app.use(json());
 app.use((req, res, next) => {
   try {
     const span = startHttpSpan(tracer, req, 'orders');
-    if (span) (req as any).span = span;
-    res.on('finish', () => {
-      span.setTag('http.status_code', (res as any).statusCode);
-      span.finish();
-    });
+    if (span) {
+      (req as any).span = span;
+      const ids = getTraceIds(tracer, span);
+      (req as any).traceId = ids.traceId;
+      (req as any).logger = logger.child ? logger.child({ trace_id: ids.traceId }) : logger;
+      res.on('finish', () => {
+        span.setTag('http.status_code', (res as any).statusCode);
+        span.finish();
+      });
+    }
   } catch (err) {
     // continue without tracing
   }

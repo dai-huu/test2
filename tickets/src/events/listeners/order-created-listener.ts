@@ -4,7 +4,8 @@ import { queueGroupName } from './queue-group-name';
 import { Ticket } from '../../models/ticket';
 import { TicketUpdatedPublisher } from '../publishers/ticket-updated-publisher';
 import { tracer } from '../../tracer';
-import { extractTraceFrom, injectTraceTo, startEventSpan } from '../../tracing-utils';
+import { extractTraceFrom, injectTraceTo, startEventSpan, getTraceIds } from '../../tracing-utils';
+import logger from '../../logger';
 
 export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   subject: Subjects.OrderCreated = Subjects.OrderCreated;
@@ -21,6 +22,8 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
       'queue.name': queueGroupName,
       'span.kind': 'consumer',
     }, 'tickets');
+    const ids = getTraceIds(tracer, span);
+    const log = logger.child ? logger.child({ trace_id: ids.traceId }) : logger;
 
     // Find the ticket that the order is reserving
     const ticket = await Ticket.findById(data.ticket.id);

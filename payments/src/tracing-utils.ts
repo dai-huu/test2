@@ -62,3 +62,21 @@ export const startJobSpan = (tracer: any, jobName: string, parentCtx: any, tags:
 };
 
 export default { injectTraceTo, extractTraceFrom, startHttpSpan, startEventSpan, startJobSpan };
+
+export const getTraceIds = (tracer: any, span: any) => {
+  try {
+    if (!span || !tracer) return { traceId: undefined, spanId: undefined };
+    const ctx = span.context && span.context();
+    if (ctx && typeof ctx.toTraceId === 'function') {
+      return { traceId: ctx.toTraceId(), spanId: ctx.toSpanId ? ctx.toSpanId() : undefined };
+    }
+    const carrier: Record<string, string> = {};
+    tracer.inject(span.context(), 'http_headers', carrier);
+    const uber = carrier['uber-trace-id'] || carrier['uber_trace_id'] || '';
+    if (uber) {
+      const parts = uber.split(':');
+      return { traceId: parts[0], spanId: parts[1] };
+    }
+  } catch (e) {}
+  return { traceId: undefined, spanId: undefined };
+};
