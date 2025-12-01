@@ -38,7 +38,8 @@ spec:
                   name: stripe-secret
                   key: STRIPE_KEY
             - name: JAEGER_COLLECTOR_URL
-              value: 'http://aba8653f524464a999ff641f5ad1d5cb-732850024.ap-northeast-1.elb.amazonaws.com:14268/api/traces'
+              #value: 'http://aba8653f524464a999ff641f5ad1d5cb-732850024.ap-northeast-1.elb.amazonaws.com:14268/api/traces'
+              value: 'http://10.0.130.135:31807/api/traces'
 ---
 apiVersion: v1
 kind: Service
