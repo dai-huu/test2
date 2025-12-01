@@ -18,12 +18,40 @@ kubectl delete secret stripe-secret -n ticketing-dev
 
 kubectl delete namespace ticketing-dev
 
-client: ok
-auth: dùng image build -> lỗi!!! (502)
-expiration: ok
-orders: dùng image build -> lỗi nhưng chạy được 1 phần (chạy với client + expiration mà đã build ra)
-payments: dùng image build -> lỗi!!! (503)
-tickets: dùng image build -> lỗi!!! (502)
+Tóm tắt ngắn gọn về tracing trong project này
 
-các microservices build ra có thể chạy: client + expiration (có thể 1 phần với orders)
+Cài đặt chung (toàn bộ dịch vụ):
+
+Mỗi service (ví dụ client, auth, tickets, orders, payments, expiration) khởi tạo tracer bằng jaeger-client (initTracer) trong file tracer.ts.
+Cấu hình chung: serviceName riêng cho từng service, sampler const param: 1 (ghi lại mọi trace), reporter gửi tới process.env.JAEGER_COLLECTOR_URL.
+Có các helper/utility trong tracing-utils.ts dùng chung: startHttpSpan, startEventSpan, startJobSpan, injectTraceTo, extractTraceFrom, getTraceIds.
+HTTP requests (web/Express):
+
+Mỗi app có middleware (ví dụ app.ts, app.ts) gọi startHttpSpan(tracer, req, '<service-name>').
+Nếu thành công middleware: gán (req as any).span, lấy trace id bằng getTraceIds, tạo logger.child({ trace_id }), và đăng ký res.on('finish', ...) để set tag http.status_code và span.finish().
+startHttpSpan cố gắng extract context từ HTTP headers (nếu có) để nối tiếp trace (childOf wireCtx), và tạo span với tags như http.method, http.url, service.name, span.kind: server.
+Event messages (NATS) — propagation giữa services:
+
+Khi publish event, code gọi injectTraceTo(tracer, span, payload) → tracer.inject(..., 'text_map', carrier) và gắn kết quả vào payload dưới trường _trace. (Ví dụ: tickets khi publish TicketUpdatedPublisher.)
+Khi consume (listener), trước xử lý listener sẽ parentCtx = extractTraceFrom(tracer, data) để lấy context từ data._trace, rồi startEventSpan(tracer, 'EventName', parentCtx, ...) để tạo span con với tag span.kind: consumer (ví dụ order-created-listener.ts).
+Sau xử lý, nếu tiếp tục publish event khác thì inject tiếp context mới vào payload, đảm bảo trace nối tiếp qua các event.
+Jobs / background tasks:
+
+Có helper startJobSpan để tạo span cho các công việc nền (job), cho phép gắn parent context nếu được truyền.
+Các tag & định danh:
+
+Các span chứa tag hữu dụng: service.name, http.method, http.url, http.status_code, span.kind, và các tag sự kiện (event.subject, order.id, ...).
+getTraceIds lấy traceId và spanId từ context hoặc từ header uber-trace-id để dùng cho logging.
+Cách trace "chạy" qua flow điển hình:
+
+Client (frontend) → gọi HTTP đến service (ví dụ orders): middleware service nhận request, startHttpSpan tạo server span; nếu client truyền header trace thì span sẽ nối tiếp. Span kết thúc khi response finish.
+Trong xử lý request, service có thể publish một event (NATS): trước khi publish, code injectTraceTo payload (gắn _trace), event chứa context để downstream consumer nối tiếp trace.
+Downstream service (ví dụ tickets) khi nhận event: extractTraceFrom để lấy parent context, startEventSpan tạo span con, xử lý và (nếu publish tiếp) inject tiếp context vào payload mới.
+Kết quả là một trace liên kết các HTTP span và event-span qua nhiều service, hiển thị trong Jaeger collector.
+Điểm lưu ý / thiết kế:
+
+Tracing dùng jaeger-client (OpenTracing style) chứ không phải OpenTelemetry ở đây.
+Traces được sampled 100% (sampler const = 1) — phù hợp dev/test nhưng cần cân nhắc môi trường production.
+Propagation qua HTTP headers (http_headers) và qua NATS bằng trường payload _trace (text_map carrier).
+Middleware thêm trace id vào logger để log dễ liên kết với trace.
 
