@@ -5,6 +5,7 @@ export default ({ req }) => {
     // We are on the server
     // create an axios instance that forwards incoming headers and injects tracing headers
     const tracer = require('../src/tracer');
+    const { extractFromHeaders, injectToHeaders } = require('../src/tracing-utils');
 
     const instance = axios.create({
       baseURL: 'http://ingress-nginx-controller.ingress-nginx.svc.cluster.local',
@@ -16,12 +17,7 @@ export default ({ req }) => {
       try {
         if (tracer) {
           // try to extract parent context from the incoming request headers (if present)
-          let parentCtx;
-          try {
-            parentCtx = req && req.headers ? tracer.extract('http_headers', req.headers) : undefined;
-          } catch (e) {
-            parentCtx = undefined;
-          }
+          const parentCtx = extractFromHeaders(tracer, req && req.headers ? req.headers : undefined);
 
           const span = tracer.startSpan('client.outgoing_request', {
             childOf: parentCtx || undefined,
@@ -32,7 +28,7 @@ export default ({ req }) => {
           // inject headers
           const headers = config.headers || {};
           try {
-            tracer.inject(span.context(), 'http_headers', headers);
+            injectToHeaders(tracer, span, headers);
           } catch (e) {
             // ignore inject errors
           }

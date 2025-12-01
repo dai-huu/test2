@@ -4,6 +4,7 @@ import { json } from 'body-parser';
 import cookieSession from 'cookie-session';
 import { errorHandler, NotFoundError } from '@sgtickets/common';
 import { tracer } from './tracer';
+import { extractFromHeaders } from './tracing-utils';
 
 import { currentUserRouter } from './routes/current-user';
 import { signinRouter } from './routes/signin';
@@ -16,7 +17,7 @@ app.use(json());
 // Jaeger tracing middleware (using jaeger-client only)
 app.use((req, res, next) => {
   try {
-    const wireCtx = (tracer as any).extract('http_headers', req.headers as any);
+    const wireCtx = extractFromHeaders(tracer, req.headers as any);
     const span = (tracer as any).startSpan(req.path, { childOf: wireCtx || undefined, tags: { 'http.method': req.method } });
     (req as any).span = span;
     res.on('finish', () => {

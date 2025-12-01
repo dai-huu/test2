@@ -9,6 +9,7 @@ import { queueGroupName } from './queue-group-name';
 import { Order } from '../../models/order';
 import { OrderCancelledPublisher } from '../publishers/order-cancelled-publisher';
 import { tracer } from '../../tracer';
+import { injectTraceTo, extractTraceFrom } from '../../tracing-utils';
 
 export class ExpirationCompleteListener extends Listener<
   ExpirationCompleteEvent
@@ -18,12 +19,7 @@ export class ExpirationCompleteListener extends Listener<
 
   async onMessage(data: ExpirationCompleteEvent['data'], msg: Message) {
     // try extract parent trace context from incoming event
-    let parentCtx;
-    try {
-      parentCtx = (tracer as any).extract('text_map', (data as any)._trace || {});
-    } catch (e) {
-      parentCtx = undefined;
-    }
+    const parentCtx = extractTraceFrom(tracer, data);
 
     const span = (tracer as any).startSpan('orders.expirationComplete', {
       childOf: parentCtx || undefined,
@@ -49,9 +45,7 @@ export class ExpirationCompleteListener extends Listener<
       ticket: { id: order.ticket.id },
     };
     try {
-      const carrier: Record<string, string> = {};
-      (tracer as any).inject(span.context(), 'text_map', carrier);
-      payload._trace = carrier;
+      injectTraceTo(tracer, span, payload);
     } catch (e) {
       // ignore
     }

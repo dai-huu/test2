@@ -14,6 +14,7 @@ import { Payment } from '../models/payment';
 import { PaymentCreatedPublisher } from '../events/publishers/payment-created-publisher';
 import { natsWrapper } from '../nats-wrapper';
 import { tracer } from '../tracer';
+import { injectTraceTo } from '../tracing-utils';
 
 const router = express.Router();
 
@@ -54,11 +55,7 @@ router.post(
     };
     try {
       const span = (req as any).span;
-      if (span) {
-        const carrier: Record<string, string> = {};
-        (tracer as any).inject(span.context(), 'text_map', carrier);
-        payload._trace = carrier;
-      }
+      injectTraceTo(tracer, span, payload);
     } catch (e) {}
     new PaymentCreatedPublisher(natsWrapper.client).publish(payload);
 

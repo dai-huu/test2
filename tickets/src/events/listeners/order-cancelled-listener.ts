@@ -4,6 +4,7 @@ import { queueGroupName } from './queue-group-name';
 import { Ticket } from '../../models/ticket';
 import { TicketUpdatedPublisher } from '../publishers/ticket-updated-publisher';
 import { tracer } from '../../tracer';
+import { extractTraceFrom, injectTraceTo } from '../../tracing-utils';
 
 export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
   subject: Subjects.OrderCancelled = Subjects.OrderCancelled;
@@ -11,12 +12,7 @@ export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
 
   async onMessage(data: OrderCancelledEvent['data'], msg: Message) {
     // extract parent trace context (if any)
-    let parentCtx;
-    try {
-      parentCtx = (tracer as any).extract('text_map', (data as any)._trace || {});
-    } catch (e) {
-      parentCtx = undefined;
-    }
+    const parentCtx = extractTraceFrom(tracer, data);
 
     const span = (tracer as any).startSpan('tickets.orderCancelled', {
       childOf: parentCtx || undefined,
@@ -41,9 +37,7 @@ export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
       version: ticket.version,
     };
     try {
-      const carrier: Record<string, string> = {};
-      (tracer as any).inject(span.context(), 'text_map', carrier);
-      payload._trace = carrier;
+      injectTraceTo(tracer, span, payload);
     } catch (e) {}
     await new TicketUpdatedPublisher(this.client).publish(payload);
 

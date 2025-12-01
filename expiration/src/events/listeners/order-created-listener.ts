@@ -3,6 +3,7 @@ import { Message } from 'node-nats-streaming';
 import { queueGroupName } from './queue-group-name';
 import { expirationQueue } from '../../queues/expiration-queue';
 import { tracer } from '../../tracer';
+import { extractTraceFrom, injectTraceTo } from '../../tracing-utils';
 
 export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   subject: Subjects.OrderCreated = Subjects.OrderCreated;
@@ -10,12 +11,7 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
 
   async onMessage(data: OrderCreatedEvent['data'], msg: Message) {
     // Try to extract parent trace context from the incoming event payload
-    let parentCtx;
-    try {
-      parentCtx = (tracer as any).extract('text_map', (data as any)._trace || {});
-    } catch (e) {
-      parentCtx = undefined;
-    }
+    const parentCtx = extractTraceFrom(tracer, data);
 
     // Start a span for handling the incoming OrderCreated event (as child of parent if available)
     const span = (tracer as any).startSpan('expiration.onMessage', {
@@ -30,9 +26,7 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
       // inject current span context into job data so the job processor can continue the trace
       const jobData: any = { orderId: data.id };
       try {
-        const carrier: Record<string, string> = {};
-        (tracer as any).inject(span.context(), 'text_map', carrier);
-        jobData._trace = carrier;
+        injectTraceTo(tracer, span, jobData);
       } catch (e) {
         // ignore inject errors
       }

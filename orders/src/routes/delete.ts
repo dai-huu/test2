@@ -8,6 +8,7 @@ import { Order, OrderStatus } from '../models/order';
 import { OrderCancelledPublisher } from '../events/publishers/order-cancelled-publisher';
 import { natsWrapper } from '../nats-wrapper';
 import { tracer } from '../tracer';
+import { injectTraceTo } from '../tracing-utils';
 
 const router = express.Router();
 
@@ -38,11 +39,7 @@ router.delete(
     };
     try {
       const span = (req as any).span;
-      if (span) {
-        const carrier: Record<string, string> = {};
-        (tracer as any).inject(span.context(), 'text_map', carrier);
-        payload._trace = carrier;
-      }
+      injectTraceTo(tracer, span, payload);
     } catch (e) {
       // ignore
     }
