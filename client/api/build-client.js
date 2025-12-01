@@ -15,7 +15,16 @@ export default ({ req }) => {
     instance.interceptors.request.use((config) => {
       try {
         if (tracer) {
+          // try to extract parent context from the incoming request headers (if present)
+          let parentCtx;
+          try {
+            parentCtx = req && req.headers ? tracer.extract('http_headers', req.headers) : undefined;
+          } catch (e) {
+            parentCtx = undefined;
+          }
+
           const span = tracer.startSpan('client.outgoing_request', {
+            childOf: parentCtx || undefined,
             tags: { 'http.method': (config && config.method) || 'GET', 'http.url': config.url },
           });
           // attach span so response interceptor can finish it
