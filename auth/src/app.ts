@@ -4,7 +4,7 @@ import { json } from 'body-parser';
 import cookieSession from 'cookie-session';
 import { errorHandler, NotFoundError } from '@sgtickets/common';
 import { tracer } from './tracer';
-import { extractFromHeaders } from './tracing-utils';
+import { startHttpSpan } from './tracing-utils';
 
 import { currentUserRouter } from './routes/current-user';
 import { signinRouter } from './routes/signin';
@@ -17,18 +17,8 @@ app.use(json());
 // Jaeger tracing middleware (using jaeger-client only)
 app.use((req, res, next) => {
   try {
-    const wireCtx = extractFromHeaders(tracer, req.headers as any);
-    const spanName = `${req.method} ${req.path}`;
-    const span = (tracer as any).startSpan(spanName, {
-      childOf: wireCtx || undefined,
-      tags: {
-        'http.method': req.method,
-        'http.url': req.originalUrl || req.url,
-        'service.name': 'auth',
-        'span.kind': 'server',
-      },
-    });
-    (req as any).span = span;
+    const span = startHttpSpan(tracer, req, 'auth');
+    if (span) (req as any).span = span;
     res.on('finish', () => {
       span.setTag('http.status_code', (res as any).statusCode);
       span.finish();

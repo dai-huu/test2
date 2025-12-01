@@ -2,7 +2,7 @@ import Queue from 'bull';
 import { ExpirationCompletePublisher } from '../events/publishers/expiration-complete-publisher';
 import { natsWrapper } from '../nats-wrapper';
 import { tracer } from '../tracer';
-import { extractTraceFrom, injectTraceTo } from '../tracing-utils';
+import { extractTraceFrom, injectTraceTo, startJobSpan } from '../tracing-utils';
 
 interface Payload {
   orderId: string;
@@ -18,15 +18,11 @@ expirationQueue.process(async (job) => {
   // Try to extract parent trace context from the job data
   const parentCtx = extractTraceFrom(tracer, job.data as any);
 
-  const span = (tracer as any).startSpan('job:ProcessExpiration', {
-    childOf: parentCtx || undefined,
-    tags: {
-      'queue.name': 'order:expiration',
-      'order.id': job.data.orderId,
-      'span.kind': 'worker',
-      'service.name': 'expiration',
-    },
-  });
+  const span = startJobSpan(tracer, 'ProcessExpiration', parentCtx, {
+    'queue.name': 'order:expiration',
+    'order.id': job.data.orderId,
+    'span.kind': 'worker',
+  }, 'expiration');
   try {
     // publish expiration complete and inject trace context so downstream services can continue the trace
     const payload: any = { orderId: job.data.orderId };

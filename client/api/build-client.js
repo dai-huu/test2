@@ -5,7 +5,7 @@ export default ({ req }) => {
     // We are on the server
     // create an axios instance that forwards incoming headers and injects tracing headers
     const tracer = require('../src/tracer');
-    const { extractFromHeaders, injectToHeaders } = require('../src/tracing-utils');
+    const { extractFromHeaders, injectToHeaders, startOutgoingSpan } = require('../src/tracing-utils');
 
     const instance = axios.create({
       baseURL: 'http://ingress-nginx-controller.ingress-nginx.svc.cluster.local',
@@ -20,16 +20,18 @@ export default ({ req }) => {
           const parentCtx = extractFromHeaders(tracer, req && req.headers ? req.headers : undefined);
 
           const method = (config && config.method && config.method.toUpperCase()) || 'GET';
-          const spanName = `client.outgoing ${method} ${config && config.url}`;
-          const span = tracer.startSpan(spanName, {
-            childOf: parentCtx || undefined,
-            tags: {
-              'http.method': method,
-              'http.url': config.url,
-              'service.name': 'client',
-              'span.kind': 'client',
-            },
-          });
+          const url = config && config.url;
+          const span = startOutgoingSpan
+            ? startOutgoingSpan(tracer, req, method, url)
+            : tracer.startSpan(`client.outgoing ${method} ${url}`, {
+                childOf: parentCtx || undefined,
+                tags: {
+                  'http.method': method,
+                  'http.url': url,
+                  'service.name': 'client',
+                  'span.kind': 'client',
+                },
+              });
           // attach span so response interceptor can finish it
           config.__jaegerSpan = span;
           // inject headers

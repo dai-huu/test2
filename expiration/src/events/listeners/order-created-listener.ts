@@ -3,7 +3,7 @@ import { Message } from 'node-nats-streaming';
 import { queueGroupName } from './queue-group-name';
 import { expirationQueue } from '../../queues/expiration-queue';
 import { tracer } from '../../tracer';
-import { extractTraceFrom, injectTraceTo } from '../../tracing-utils';
+import { extractTraceFrom, injectTraceTo, startEventSpan } from '../../tracing-utils';
 
 export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   subject: Subjects.OrderCreated = Subjects.OrderCreated;
@@ -14,16 +14,12 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
     const parentCtx = extractTraceFrom(tracer, data);
 
     // Start a span for handling the incoming OrderCreated event (as child of parent if available)
-    const span = (tracer as any).startSpan('event:OrderCreated', {
-      childOf: parentCtx || undefined,
-      tags: {
-        'event.subject': Subjects.OrderCreated,
-        'order.id': data.id,
-        'queue.name': queueGroupName,
-        'span.kind': 'consumer',
-        'service.name': 'expiration',
-      },
-    });
+    const span = startEventSpan(tracer, 'OrderCreated', parentCtx, {
+      'event.subject': Subjects.OrderCreated,
+      'order.id': data.id,
+      'queue.name': queueGroupName,
+      'span.kind': 'consumer',
+    }, 'expiration');
 
     try {
       const delay = new Date(data.expiresAt).getTime() - new Date().getTime();

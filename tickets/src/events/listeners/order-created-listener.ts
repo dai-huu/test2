@@ -4,7 +4,7 @@ import { queueGroupName } from './queue-group-name';
 import { Ticket } from '../../models/ticket';
 import { TicketUpdatedPublisher } from '../publishers/ticket-updated-publisher';
 import { tracer } from '../../tracer';
-import { extractTraceFrom, injectTraceTo } from '../../tracing-utils';
+import { extractTraceFrom, injectTraceTo, startEventSpan } from '../../tracing-utils';
 
 export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   subject: Subjects.OrderCreated = Subjects.OrderCreated;
@@ -14,17 +14,13 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
     // try to extract parent trace context from incoming event
     const parentCtx = extractTraceFrom(tracer, data);
 
-    const span = (tracer as any).startSpan('event:OrderCreated', {
-      childOf: parentCtx || undefined,
-      tags: {
-        'event.subject': Subjects.OrderCreated,
-        'order.id': data.id,
-        'ticket.id': data.ticket.id,
-        'queue.name': queueGroupName,
-        'span.kind': 'consumer',
-        'service.name': 'tickets',
-      },
-    });
+    const span = startEventSpan(tracer, 'OrderCreated', parentCtx, {
+      'event.subject': Subjects.OrderCreated,
+      'order.id': data.id,
+      'ticket.id': data.ticket.id,
+      'queue.name': queueGroupName,
+      'span.kind': 'consumer',
+    }, 'tickets');
 
     // Find the ticket that the order is reserving
     const ticket = await Ticket.findById(data.ticket.id);

@@ -9,7 +9,7 @@ import { queueGroupName } from './queue-group-name';
 import { Order } from '../../models/order';
 import { OrderCancelledPublisher } from '../publishers/order-cancelled-publisher';
 import { tracer } from '../../tracer';
-import { injectTraceTo, extractTraceFrom } from '../../tracing-utils';
+import { injectTraceTo, extractTraceFrom, startEventSpan } from '../../tracing-utils';
 
 export class ExpirationCompleteListener extends Listener<
   ExpirationCompleteEvent
@@ -21,15 +21,11 @@ export class ExpirationCompleteListener extends Listener<
     // try extract parent trace context from incoming event
     const parentCtx = extractTraceFrom(tracer, data);
 
-    const span = (tracer as any).startSpan('event:ExpirationComplete', {
-      childOf: parentCtx || undefined,
-      tags: {
-        'event.subject': Subjects.ExpirationComplete,
-        'order.id': data.orderId,
-        'span.kind': 'consumer',
-        'service.name': 'orders',
-      },
-    });
+    const span = startEventSpan(tracer, 'ExpirationComplete', parentCtx, {
+      'event.subject': Subjects.ExpirationComplete,
+      'order.id': data.orderId,
+      'span.kind': 'consumer',
+    }, 'orders');
 
     const order = await Order.findById(data.orderId).populate('ticket');
 

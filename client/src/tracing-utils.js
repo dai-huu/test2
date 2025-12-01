@@ -35,3 +35,23 @@ exports.extractFromObject = (tracer, src) => {
     return undefined;
   }
 };
+
+exports.startOutgoingSpan = (tracer, req, method, url, serviceName = 'client') => {
+  try {
+    const parent = exports.extractFromHeaders(tracer, req && req.headers ? req.headers : {});
+    const m = (method && method.toUpperCase()) || 'GET';
+    const spanName = `${serviceName}.outgoing ${m} ${url}`;
+    const span = tracer.startSpan(spanName, {
+      childOf: parent || undefined,
+      tags: {
+        'http.method': m,
+        'http.url': url,
+        'service.name': serviceName,
+        'span.kind': 'client',
+      },
+    });
+    return span;
+  } catch (e) {
+    return undefined;
+  }
+};

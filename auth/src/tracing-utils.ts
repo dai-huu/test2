@@ -17,3 +17,24 @@ export const injectToHeaders = (tracer: any, span: any, headers: any) => {
 };
 
 export default { extractFromHeaders, injectToHeaders };
+
+export const startHttpSpan = (tracer: any, req: any, serviceName = 'service') => {
+  try {
+    const wireCtx = extractFromHeaders(tracer, req && req.headers ? req.headers : {});
+    const spanName = `${req.method} ${req.path}`;
+    const span = (tracer as any).startSpan(spanName, {
+      childOf: wireCtx || undefined,
+      tags: {
+        'http.method': req.method,
+        'http.url': req.originalUrl || req.url,
+        'service.name': serviceName,
+        'span.kind': 'server',
+      },
+    });
+    return span;
+  } catch (e) {
+    return undefined;
+  }
+};
+
+export default { extractFromHeaders, injectToHeaders, startHttpSpan };
