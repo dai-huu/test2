@@ -7,6 +7,7 @@ import {
 import { Order, OrderStatus } from '../models/order';
 import { OrderCancelledPublisher } from '../events/publishers/order-cancelled-publisher';
 import { natsWrapper } from '../nats-wrapper';
+import { tracer } from '../tracer';
 
 const router = express.Router();
 
@@ -28,13 +29,24 @@ router.delete(
     await order.save();
 
     // publishing an event saying this was cancelled!
-    new OrderCancelledPublisher(natsWrapper.client).publish({
+    const payload: any = {
       id: order.id,
       version: order.version,
       ticket: {
         id: order.ticket.id,
       },
-    });
+    };
+    try {
+      const span = (req as any).span;
+      if (span) {
+        const carrier: Record<string, string> = {};
+        (tracer as any).inject(span.context(), 'text_map', carrier);
+        payload._trace = carrier;
+      }
+    } catch (e) {
+      // ignore
+    }
+    new OrderCancelledPublisher(natsWrapper.client).publish(payload);
 
     res.status(204).send(order);
   }

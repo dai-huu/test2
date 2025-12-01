@@ -4,6 +4,7 @@ import { requireAuth, validateRequest } from '@sgtickets/common';
 import { Ticket } from '../models/ticket';
 import { TicketCreatedPublisher } from '../events/publishers/ticket-created-publisher';
 import { natsWrapper } from '../nats-wrapper';
+import { tracer } from '../tracer';
 
 const router = express.Router();
 
@@ -26,13 +27,22 @@ router.post(
       userId: req.currentUser!.id,
     });
     await ticket.save();
-    new TicketCreatedPublisher(natsWrapper.client).publish({
+    const payload: any = {
       id: ticket.id,
       title: ticket.title,
       price: ticket.price,
       userId: ticket.userId,
       version: ticket.version,
-    });
+    };
+    try {
+      const span = (req as any).span;
+      if (span) {
+        const carrier: Record<string, string> = {};
+        (tracer as any).inject(span.context(), 'text_map', carrier);
+        payload._trace = carrier;
+      }
+    } catch (e) {}
+    new TicketCreatedPublisher(natsWrapper.client).publish(payload);
 
     res.status(201).send(ticket);
   }

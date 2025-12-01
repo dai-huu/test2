@@ -12,6 +12,7 @@ import { Ticket } from '../models/ticket';
 import { Order } from '../models/order';
 import { OrderCreatedPublisher } from '../events/publishers/order-created-publisher';
 import { natsWrapper } from '../nats-wrapper';
+import { tracer } from '../tracer';
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ router.post(
     await order.save();
 
     // Publish an event saying that an order was created
-    new OrderCreatedPublisher(natsWrapper.client).publish({
+    const payload: any = {
       id: order.id,
       version: order.version,
       status: order.status,
@@ -67,7 +68,20 @@ router.post(
         id: ticket.id,
         price: ticket.price,
       },
-    });
+    };
+    // if a server-side span exists on the request, inject its trace context into the event
+    try {
+      const span = (req as any).span;
+      if (span) {
+        const carrier: Record<string, string> = {};
+        (tracer as any).inject(span.context(), 'text_map', carrier);
+        payload._trace = carrier;
+      }
+    } catch (e) {
+      // ignore inject errors
+    }
+
+    new OrderCreatedPublisher(natsWrapper.client).publish(payload);
 
     res.status(201).send(order);
   }

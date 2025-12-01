@@ -10,6 +10,7 @@ import {
 import { Ticket } from '../models/ticket';
 import { TicketUpdatedPublisher } from '../events/publishers/ticket-updated-publisher';
 import { natsWrapper } from '../nats-wrapper';
+import { tracer } from '../tracer';
 
 const router = express.Router();
 
@@ -43,13 +44,22 @@ router.put(
       price: req.body.price,
     });
     await ticket.save();
-    new TicketUpdatedPublisher(natsWrapper.client).publish({
+    const payload: any = {
       id: ticket.id,
       title: ticket.title,
       price: ticket.price,
       userId: ticket.userId,
       version: ticket.version,
-    });
+    };
+    try {
+      const span = (req as any).span;
+      if (span) {
+        const carrier: Record<string, string> = {};
+        (tracer as any).inject(span.context(), 'text_map', carrier);
+        payload._trace = carrier;
+      }
+    } catch (e) {}
+    new TicketUpdatedPublisher(natsWrapper.client).publish(payload);
 
     res.send(ticket);
   }

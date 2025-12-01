@@ -9,8 +9,17 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
   queueGroupName = queueGroupName;
 
   async onMessage(data: OrderCreatedEvent['data'], msg: Message) {
-    // Start a span for handling the incoming OrderCreated event
+    // Try to extract parent trace context from the incoming event payload
+    let parentCtx;
+    try {
+      parentCtx = (tracer as any).extract('text_map', (data as any)._trace || {});
+    } catch (e) {
+      parentCtx = undefined;
+    }
+
+    // Start a span for handling the incoming OrderCreated event (as child of parent if available)
     const span = (tracer as any).startSpan('expiration.onMessage', {
+      childOf: parentCtx || undefined,
       tags: { 'event.subject': Subjects.OrderCreated, 'order.id': data.id },
     });
 
@@ -18,14 +27,17 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
       const delay = new Date(data.expiresAt).getTime() - new Date().getTime();
       console.log('Waiting this many milliseconds to process the job:', delay);
 
-      await expirationQueue.add(
-        {
-          orderId: data.id,
-        },
-        {
-          delay,
-        }
-      );
+      // inject current span context into job data so the job processor can continue the trace
+      const jobData: any = { orderId: data.id };
+      try {
+        const carrier: Record<string, string> = {};
+        (tracer as any).inject(span.context(), 'text_map', carrier);
+        jobData._trace = carrier;
+      } catch (e) {
+        // ignore inject errors
+      }
+
+      await expirationQueue.add(jobData, { delay });
 
       msg.ack();
     } catch (err) {
