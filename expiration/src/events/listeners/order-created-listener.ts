@@ -14,9 +14,15 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
     const parentCtx = extractTraceFrom(tracer, data);
 
     // Start a span for handling the incoming OrderCreated event (as child of parent if available)
-    const span = (tracer as any).startSpan('expiration.onMessage', {
+    const span = (tracer as any).startSpan('event:OrderCreated', {
       childOf: parentCtx || undefined,
-      tags: { 'event.subject': Subjects.OrderCreated, 'order.id': data.id },
+      tags: {
+        'event.subject': Subjects.OrderCreated,
+        'order.id': data.id,
+        'queue.name': queueGroupName,
+        'span.kind': 'consumer',
+        'service.name': 'expiration',
+      },
     });
 
     try {

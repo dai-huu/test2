@@ -14,9 +14,16 @@ export class OrderCancelledListener extends Listener<OrderCancelledEvent> {
     // extract parent trace context (if any)
     const parentCtx = extractTraceFrom(tracer, data);
 
-    const span = (tracer as any).startSpan('tickets.orderCancelled', {
+    const span = (tracer as any).startSpan('event:OrderCancelled', {
       childOf: parentCtx || undefined,
-      tags: { 'event.subject': Subjects.OrderCancelled, 'order.id': data.id },
+      tags: {
+        'event.subject': Subjects.OrderCancelled,
+        'order.id': data.id,
+        'ticket.id': data.ticket.id,
+        'queue.name': queueGroupName,
+        'span.kind': 'consumer',
+        'service.name': 'tickets',
+      },
     });
 
     const ticket = await Ticket.findById(data.ticket.id);

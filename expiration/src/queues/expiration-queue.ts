@@ -18,9 +18,14 @@ expirationQueue.process(async (job) => {
   // Try to extract parent trace context from the job data
   const parentCtx = extractTraceFrom(tracer, job.data as any);
 
-  const span = (tracer as any).startSpan('expiration.processJob', {
+  const span = (tracer as any).startSpan('job:ProcessExpiration', {
     childOf: parentCtx || undefined,
-    tags: { 'queue.name': 'order:expiration', 'order.id': job.data.orderId },
+    tags: {
+      'queue.name': 'order:expiration',
+      'order.id': job.data.orderId,
+      'span.kind': 'worker',
+      'service.name': 'expiration',
+    },
   });
   try {
     // publish expiration complete and inject trace context so downstream services can continue the trace

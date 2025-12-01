@@ -14,9 +14,16 @@ export class OrderCreatedListener extends Listener<OrderCreatedEvent> {
     // try to extract parent trace context from incoming event
     const parentCtx = extractTraceFrom(tracer, data);
 
-    const span = (tracer as any).startSpan('tickets.orderCreated', {
+    const span = (tracer as any).startSpan('event:OrderCreated', {
       childOf: parentCtx || undefined,
-      tags: { 'event.subject': Subjects.OrderCreated, 'order.id': data.id },
+      tags: {
+        'event.subject': Subjects.OrderCreated,
+        'order.id': data.id,
+        'ticket.id': data.ticket.id,
+        'queue.name': queueGroupName,
+        'span.kind': 'consumer',
+        'service.name': 'tickets',
+      },
     });
 
     // Find the ticket that the order is reserving

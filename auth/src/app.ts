@@ -18,7 +18,16 @@ app.use(json());
 app.use((req, res, next) => {
   try {
     const wireCtx = extractFromHeaders(tracer, req.headers as any);
-    const span = (tracer as any).startSpan(req.path, { childOf: wireCtx || undefined, tags: { 'http.method': req.method } });
+    const spanName = `${req.method} ${req.path}`;
+    const span = (tracer as any).startSpan(spanName, {
+      childOf: wireCtx || undefined,
+      tags: {
+        'http.method': req.method,
+        'http.url': req.originalUrl || req.url,
+        'service.name': 'auth',
+        'span.kind': 'server',
+      },
+    });
     (req as any).span = span;
     res.on('finish', () => {
       span.setTag('http.status_code', (res as any).statusCode);

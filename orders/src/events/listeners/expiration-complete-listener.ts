@@ -21,9 +21,14 @@ export class ExpirationCompleteListener extends Listener<
     // try extract parent trace context from incoming event
     const parentCtx = extractTraceFrom(tracer, data);
 
-    const span = (tracer as any).startSpan('orders.expirationComplete', {
+    const span = (tracer as any).startSpan('event:ExpirationComplete', {
       childOf: parentCtx || undefined,
-      tags: { 'event.subject': Subjects.ExpirationComplete, 'order.id': data.orderId },
+      tags: {
+        'event.subject': Subjects.ExpirationComplete,
+        'order.id': data.orderId,
+        'span.kind': 'consumer',
+        'service.name': 'orders',
+      },
     });
 
     const order = await Order.findById(data.orderId).populate('ticket');

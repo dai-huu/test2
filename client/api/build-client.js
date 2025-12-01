@@ -19,9 +19,16 @@ export default ({ req }) => {
           // try to extract parent context from the incoming request headers (if present)
           const parentCtx = extractFromHeaders(tracer, req && req.headers ? req.headers : undefined);
 
-          const span = tracer.startSpan('client.outgoing_request', {
+          const method = (config && config.method && config.method.toUpperCase()) || 'GET';
+          const spanName = `client.outgoing ${method} ${config && config.url}`;
+          const span = tracer.startSpan(spanName, {
             childOf: parentCtx || undefined,
-            tags: { 'http.method': (config && config.method) || 'GET', 'http.url': config.url },
+            tags: {
+              'http.method': method,
+              'http.url': config.url,
+              'service.name': 'client',
+              'span.kind': 'client',
+            },
           });
           // attach span so response interceptor can finish it
           config.__jaegerSpan = span;
