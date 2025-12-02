@@ -21,61 +21,109 @@ variables:
 build_client:
   extends: .default
   stage: build
+  rules:
+    - changes:
+        - client/**
+        - common/**
   script:
     - docker build -f client/Dockerfile -t $DOCKERHUB_USERNAME/client:latest client/
     - docker tag $DOCKERHUB_USERNAME/client:latest $DOCKERHUB_USERNAME/client:$SHORT_TAG
     - docker push $DOCKERHUB_USERNAME/client:latest
     - docker push $DOCKERHUB_USERNAME/client:$SHORT_TAG
+    - touch client.built
+  artifacts:
+    paths:
+      - client.built
 
 
 build_tickets:
   extends: .default
   stage: build
+  rules:
+    - changes:
+        - tickets/**
+        - common/**
   script:
     - docker build -f tickets/Dockerfile -t $DOCKERHUB_USERNAME/tickets:latest tickets/
     - docker tag $DOCKERHUB_USERNAME/tickets:latest $DOCKERHUB_USERNAME/tickets:$SHORT_TAG
     - docker push $DOCKERHUB_USERNAME/tickets:latest
     - docker push $DOCKERHUB_USERNAME/tickets:$SHORT_TAG
+    - touch tickets.built
+  artifacts:
+    paths:
+      - tickets.built
 
 
 build_orders:
   extends: .default
   stage: build
+  rules:
+    - changes:
+        - orders/**
+        - common/**
   script:
     - docker build -f orders/Dockerfile -t $DOCKERHUB_USERNAME/orders:latest orders/
     - docker tag $DOCKERHUB_USERNAME/orders:latest $DOCKERHUB_USERNAME/orders:$SHORT_TAG
     - docker push $DOCKERHUB_USERNAME/orders:latest
     - docker push $DOCKERHUB_USERNAME/orders:$SHORT_TAG
+    - touch orders.built
+  artifacts:
+    paths:
+      - orders.built
 
 
 build_payments:
   extends: .default
   stage: build
+  rules:
+    - changes:
+        - payments/**
+        - common/**
   script:
     - docker build -f payments/Dockerfile -t $DOCKERHUB_USERNAME/payments:latest payments/
     - docker tag $DOCKERHUB_USERNAME/payments:latest $DOCKERHUB_USERNAME/payments:$SHORT_TAG
     - docker push $DOCKERHUB_USERNAME/payments:latest
     - docker push $DOCKERHUB_USERNAME/payments:$SHORT_TAG
+    - touch payments.built
+  artifacts:
+    paths:
+      - payments.built
 
 
 build_auth:
   extends: .default
   stage: build
+  rules:
+    - changes:
+        - auth/**
+        - common/**
   script:
     - docker build -f auth/Dockerfile -t $DOCKERHUB_USERNAME/auth:latest auth/
     - docker tag $DOCKERHUB_USERNAME/auth:latest $DOCKERHUB_USERNAME/auth:$SHORT_TAG
     - docker push $DOCKERHUB_USERNAME/auth:latest
     - docker push $DOCKERHUB_USERNAME/auth:$SHORT_TAG
+    - touch auth.built
+  artifacts:
+    paths:
+      - auth.built
 
 
 build_expiration:
   extends: .default
   stage: build
+  rules:
+    - changes:
+        - expiration/**
+        - common/**
   script:
     - docker build -f expiration/Dockerfile -t $DOCKERHUB_USERNAME/expiration:latest expiration/
     - docker tag $DOCKERHUB_USERNAME/expiration:latest $DOCKERHUB_USERNAME/expiration:$SHORT_TAG
     - docker push $DOCKERHUB_USERNAME/expiration:latest
     - docker push $DOCKERHUB_USERNAME/expiration:$SHORT_TAG
+    - touch expiration.built
+  artifacts:
+    paths:
+      - expiration.built
 
 
 ###########################################
@@ -110,31 +158,74 @@ update_manifest:
           echo "Processing $service -> $FILE"
 
           # [DEBUG] In ra dòng image hiện tại để xem nó là gì
-          echo "Current content:"
-          yq e '.spec.template.spec.containers[].image' "$FILE" || echo "NOT FOUND IMAGE KEY!"
+          update_manifest:
+            stage: update-manifest
+            image: alpine:3.18
+            needs:
+              - job: build_client
+                artifacts: true
+              - job: build_tickets
+                artifacts: true
+              - job: build_orders
+                artifacts: true
+              - job: build_payments
+                artifacts: true
+              - job: build_auth
+                artifacts: true
+              - job: build_expiration
+                artifacts: true
+            before_script:
+              - apk add --no-cache git bash yq
+              - git config --global user.email "ci@gitlab.local"
+              - git config --global user.name "GitLab CI"
+              - git config --global http.sslVerify false
+            script:
+              - git remote set-url origin "http://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+              - git fetch origin
+              - git checkout "$CI_COMMIT_REF_NAME" || git checkout -b "$CI_COMMIT_REF_NAME"
+              - git pull origin "$CI_COMMIT_REF_NAME"
 
-          # Update image tag bằng yq (chỉ update đúng container có tên service)
-          yq e "(.spec.template.spec.containers[] | select(.image | test(\"${DOCKERHUB_USERNAME}/${service}:\")) | .image) = \"${DOCKERHUB_USERNAME}/${service}:${SHORT_TAG}\"" -i "$FILE"
+              - SHORT_TAG="$CI_COMMIT_SHORT_SHA"
+              - echo "Updating manifests with tag $SHORT_TAG..."
 
-          # [DEBUG] In ra kết quả sau khi yq để kiểm tra
-          echo "New content:"
-          yq e '.spec.template.spec.containers[].image' "$FILE"
-        else
-          echo "Warning: File $FILE not found."
-        fi
-      done
-      echo "------------------------------------------------"
+              - |
+                SERVICES="tickets orders payments auth client expiration"
+                BUILT_SERVICES=""
+                for service in $SERVICES; do
+                  MARKER="${service}.built"
+                  if [ -f "$MARKER" ]; then
+                    BUILT_SERVICES="$BUILT_SERVICES $service"
+                  fi
+                done
+                if [ -z "$BUILT_SERVICES" ]; then
+                  echo "No services built in this pipeline. Nothing to update."
+                  exit 0
+                fi
+                for service in $BUILT_SERVICES; do
+                  FILE="infra/k8s/${service}-depl.yaml"
+                  if [ -f "$FILE" ]; then
+                    echo "------------------------------------------------"
+                    echo "Processing $service -> $FILE"
+                    echo "Current content:"
+                    yq e '.spec.template.spec.containers[].image' "$FILE" || echo "NOT FOUND IMAGE KEY!"
+                    yq e "(.spec.template.spec.containers[] | select(.image | test(\"${DOCKERHUB_USERNAME}/${service}:\")) | .image) = \"${DOCKERHUB_USERNAME}/${service}:${SHORT_TAG}\"" -i "$FILE"
+                    echo "New content:"
+                    yq e '.spec.template.spec.containers[].image' "$FILE"
+                  else
+                    echo "Warning: File $FILE not found."
+                  fi
+                done
+                echo "------------------------------------------------"
 
-    # Commit
-    - git add infra/k8s || true
-    - |
-      if ! git diff --cached --quiet; then
-        echo "Changes detected. Committing..."
-        git commit -m "Update image tags to $SHORT_TAG [skip ci]"
-        git push origin "$CI_COMMIT_REF_NAME"
-      else
-        echo "!!! ERROR: No changes detected after sed commands !!!"
-        echo "Please check the Logs above to see 'Current content' vs 'New content'"
-        # Không exit 1 để pipeline không đỏ lòm, nhưng bạn cần đọc log
-        exit 1 
-      fi
+              # Commit
+              - git add infra/k8s || true
+              - |
+                if ! git diff --cached --quiet; then
+                  echo "Changes detected. Committing..."
+                  git commit -m "Update image tags to $SHORT_TAG [skip ci]"
+                  git push origin "$CI_COMMIT_REF_NAME"
+                else
+                  echo "!!! ERROR: No changes detected after sed commands !!!"
+                  echo "Please check the Logs above to see 'Current content' vs 'New content'"
+                  exit 1 
+                fi

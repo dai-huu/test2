@@ -17,7 +17,7 @@ spec:
     path: infra/k8s
   destination:
     #server: 'https://D9BA1369763C234F74DA3968D99911E1.gr7.ap-northeast-1.eks.amazonaws.com'
-    server: https://872B4A38994DDAE166B490F6732A0F19.gr7.ap-northeast-1.eks.amazonaws.com
+    server: https://E749CAB5BBFF7887A3B71C39A28B42CB.gr7.ap-northeast-1.eks.amazonaws.com
     namespace: ticketing-dev
   syncPolicy:
     automated:
